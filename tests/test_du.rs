@@ -1,4 +1,5 @@
 use common::util::*;
+use std::env;
 
 static SUB_DIR: &str = "subdir/deeper";
 static SUB_DIR_LINKS: &str = "subdir/links";
@@ -121,4 +122,39 @@ fn _du_d_flag(s: String) {
 #[cfg(not(target_os = "macos"))]
 fn _du_d_flag(s: String) {
     assert_eq!(s, "28\t./subdir\n36\t./\n");
+}
+
+#[test]
+fn test_du_blocksize_env_flag() {
+    let last = env::var("BLOCKSIZE");
+    env::set_var("BLOCKSIZE", "1000000");
+    let ts = TestScenario::new("du");
+
+    let result = ts.ucmd_keepenv().run();
+    assert!(result.success);
+    assert_eq!(result.stderr, "");
+    assert_eq!(
+        result.stdout,
+        "1\t./subdir
+1\t./subdir/deeper
+1\t./subdir/links
+1\t./
+"
+    );
+    if let Ok(s) = last {
+        env::set_var("SHELL", s);
+    }
+}
+
+#[test]
+fn test_du_bad_blocksize_env_flag_doesnt_crash() {
+    let last = env::var("BLOCKSIZE");
+    env::set_var("BLOCKSIZE", "i dont want to be cast to an int");
+    let ts = TestScenario::new("du");
+
+    let result = ts.ucmd_keepenv().run();
+    assert!(result.success);
+    if let Ok(s) = last {
+        env::set_var("SHELL", s);
+    }
 }
