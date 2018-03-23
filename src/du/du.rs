@@ -72,8 +72,67 @@ impl Stat {
     }
 }
 
+fn translate_to_pure_number(s: Option<String>) -> u64 {
+    match s {
+        Some(s) => {
+            let mut found_number = false;
+            let mut found_letter = false;
+            let mut numbers = String::new();
+            let mut letters = String::new();
+            for c in s.trim().chars() {
+                if found_letter && c.is_digit(10) || !found_number && !c.is_digit(10) {
+                    show_error!("invalid --block-size argument '{}'", s); //fix
+                    return 1;
+                } else if c.is_digit(10) {
+                    found_number = true;
+                    numbers.push(c);
+                } else if c.is_alphabetic() {
+                    found_letter = true;
+                    letters.push(c);
+                }
+            }
+            let number = numbers.parse::<u64>().unwrap();
+            let multiple = match &letters[..] {
+                "K" => 1024u64.pow(1),
+                "M" => 1024u64.pow(2),
+                "G" => 1024u64.pow(3),
+                "T" => 1024u64.pow(4),
+                "P" => 1024u64.pow(5),
+                "E" => 1024u64.pow(6),
+                "Z" => 1024u64.pow(7),
+                "Y" => 1024u64.pow(8),
+                "KB" => 1000u64.pow(1),
+                "MB" => 1000u64.pow(2),
+                "GB" => 1000u64.pow(3),
+                "TB" => 1000u64.pow(4),
+                "PB" => 1000u64.pow(5),
+                "EB" => 1000u64.pow(6),
+                "ZB" => 1000u64.pow(7),
+                "YB" => 1000u64.pow(8),
+                _ => {
+                    show_error!("invalid --block-size argument '{}'", s); //fix
+                    return 1;
+                }
+            };
+            number * multiple
+        }
+        None => get_default_blocks(), //fix
+    }
+}
+
 fn get_default_blocks() -> u64 {
-    1024
+    for env_var in ["DU_BLOCK_SIZE", "BLOCK_SIZE", "BLOCKSIZE"].into_iter() {
+        if let Ok(val) = env::var(env_var) {
+            if let Ok(result) = val.parse::<u64>() {
+                return result;
+            }
+        }
+    }
+    if env::var("POSIXLY_CORRECT").is_ok() {
+        512
+    } else {
+        1024
+    }
 }
 
 // this takes `my_stat` to avoid having to stat files multiple times.
@@ -258,51 +317,7 @@ pub fn uumain(args: Vec<String>) -> i32 {
         1024
     };
 
-    let block_size = match matches.opt_str("block-size") {
-        Some(s) => {
-            let mut found_number = false;
-            let mut found_letter = false;
-            let mut numbers = String::new();
-            let mut letters = String::new();
-            for c in s.chars() {
-                if found_letter && c.is_digit(10) || !found_number && !c.is_digit(10) {
-                    show_error!("invalid --block-size argument '{}'", s);
-                    return 1;
-                } else if c.is_digit(10) {
-                    found_number = true;
-                    numbers.push(c);
-                } else if c.is_alphabetic() {
-                    found_letter = true;
-                    letters.push(c);
-                }
-            }
-            let number = numbers.parse::<u64>().unwrap();
-            let multiple = match &letters[..] {
-                "K" => 1024u64.pow(1),
-                "M" => 1024u64.pow(2),
-                "G" => 1024u64.pow(3),
-                "T" => 1024u64.pow(4),
-                "P" => 1024u64.pow(5),
-                "E" => 1024u64.pow(6),
-                "Z" => 1024u64.pow(7),
-                "Y" => 1024u64.pow(8),
-                "KB" => 1000u64.pow(1),
-                "MB" => 1000u64.pow(2),
-                "GB" => 1000u64.pow(3),
-                "TB" => 1000u64.pow(4),
-                "PB" => 1000u64.pow(5),
-                "EB" => 1000u64.pow(6),
-                "ZB" => 1000u64.pow(7),
-                "YB" => 1000u64.pow(8),
-                _ => {
-                    show_error!("invalid --block-size argument '{}'", s);
-                    return 1;
-                }
-            };
-            number * multiple
-        }
-        None => get_default_blocks(),
-    };
+    let block_size = translate_to_pure_number(matches.opt_str("block-size"));
 
     let convert_size = |size: u64| -> String {
         if matches.opt_present("human-readable") || matches.opt_present("si") {
@@ -428,4 +443,15 @@ Try '{} --help' for more information.",
     }
 
     0
+}
+
+#[cfg(test)]
+mod test_du {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_translate_to_pure_number() {
+        assert_eq!(translate_to_pure_number(Some("10".to_string())), 10);
+    }
 }
