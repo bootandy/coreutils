@@ -92,7 +92,7 @@ fn translate_to_pure_number(s: &Option<String>) -> Option<u64> {
                 }
             }
             let number = numbers.parse::<u64>().unwrap();
-            let multiple = match &letters[..] {
+            let multiple = match letters[..].to_uppercase().as_str() {
                 "" => 1,
                 "K" => 1024u64.pow(1),
                 "M" => 1024u64.pow(2),
@@ -126,23 +126,20 @@ fn read_block_size(s: Option<String>) -> u64 {
                 Some(value) => show_error!("invalid --block-size argument '{}'", value),
                 _ => (),
             };
-            1
-        }
-    }
-}
 
-fn get_default_blocks() -> u64 {
-    for env_var in ["DU_BLOCK_SIZE", "BLOCK_SIZE", "BLOCKSIZE"].into_iter() {
-        if let Ok(val) = env::var(env_var) {
-            if let Ok(result) = val.parse::<u64>() {
-                return result;
+            for env_var in ["DU_BLOCK_SIZE", "BLOCK_SIZE", "BLOCKSIZE"].into_iter() {
+                match translate_to_pure_number(&env::var(env_var).ok()) {
+                    Some(quantity) => return quantity,
+                    None => (),
+                }
+            }
+
+            if env::var("POSIXLY_CORRECT").is_ok() {
+                512
+            } else {
+                1024
             }
         }
-    }
-    if env::var("POSIXLY_CORRECT").is_ok() {
-        512
-    } else {
-        1024
     }
 }
 
@@ -478,8 +475,8 @@ mod test_du {
     fn test_read_block_size() {
         let test_data = [
             (Some("10".to_string()), 10),
-            (None, 1),
-            (Some("BAD_STRING".to_string()), 1),
+            (None, 1024),
+            (Some("BAD_STRING".to_string()), 1024),
         ];
         for it in test_data.into_iter() {
             assert_eq!(read_block_size(it.0.clone()), it.1);
