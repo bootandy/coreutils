@@ -14,6 +14,7 @@ extern crate time;
 #[macro_use]
 extern crate uucore;
 
+use std::env;
 use std::fs;
 use std::iter;
 use std::io::{stderr, Result, Write};
@@ -72,17 +73,16 @@ impl Stat {
     }
 }
 
-fn translate_to_pure_number(s: Option<String>) -> u64 {
+fn translate_to_pure_number(s: &Option<String>) -> Option<u64> {
     match s {
-        Some(s) => {
+        &Some(ref s) => {
             let mut found_number = false;
             let mut found_letter = false;
             let mut numbers = String::new();
             let mut letters = String::new();
             for c in s.trim().chars() {
                 if found_letter && c.is_digit(10) || !found_number && !c.is_digit(10) {
-                    show_error!("invalid --block-size argument '{}'", s); //fix
-                    return 1;
+                    return None;
                 } else if c.is_digit(10) {
                     found_number = true;
                     numbers.push(c);
@@ -93,6 +93,7 @@ fn translate_to_pure_number(s: Option<String>) -> u64 {
             }
             let number = numbers.parse::<u64>().unwrap();
             let multiple = match &letters[..] {
+                "" => 1,
                 "K" => 1024u64.pow(1),
                 "M" => 1024u64.pow(2),
                 "G" => 1024u64.pow(3),
@@ -109,14 +110,24 @@ fn translate_to_pure_number(s: Option<String>) -> u64 {
                 "EB" => 1000u64.pow(6),
                 "ZB" => 1000u64.pow(7),
                 "YB" => 1000u64.pow(8),
-                _ => {
-                    show_error!("invalid --block-size argument '{}'", s); //fix
-                    return 1;
-                }
+                _ => return None,
             };
-            number * multiple
+            Some(number * multiple)
         }
-        None => get_default_blocks(), //fix
+        &None => None,
+    }
+}
+
+fn read_block_size(s: Option<String>) -> u64 {
+    match translate_to_pure_number(&s) {
+        Some(v) => v,
+        None => {
+            match s {
+                Some(value) => show_error!("invalid --block-size argument '{}'", value),
+                _ => (),
+            };
+            1
+        }
     }
 }
 
@@ -317,7 +328,7 @@ pub fn uumain(args: Vec<String>) -> i32 {
         1024
     };
 
-    let block_size = translate_to_pure_number(matches.opt_str("block-size"));
+    let block_size = read_block_size(matches.opt_str("block-size"));
 
     let convert_size = |size: u64| -> String {
         if matches.opt_present("human-readable") || matches.opt_present("si") {
@@ -452,6 +463,26 @@ mod test_du {
 
     #[test]
     fn test_translate_to_pure_number() {
-        assert_eq!(translate_to_pure_number(Some("10".to_string())), 10);
+        let test_data = [
+            (Some("10".to_string()), Some(10)),
+            (Some("10K".to_string()), Some(10 * 1024)),
+            (Some("5M".to_string()), Some(5 * 1024 * 1024)),
+            (Some("900KB".to_string()), Some(900 * 1000)),
+            (Some("BAD_STRING".to_string()), None),
+        ];
+        for it in test_data.into_iter() {
+            assert_eq!(translate_to_pure_number(&it.0), it.1);
+        }
+    }
+    #[test]
+    fn test_read_block_size() {
+        let test_data = [
+            (Some("10".to_string()), 10),
+            (None, 1),
+            (Some("BAD_STRING".to_string()), 1),
+        ];
+        for it in test_data.into_iter() {
+            assert_eq!(read_block_size(it.0.clone()), it.1);
+        }
     }
 }
