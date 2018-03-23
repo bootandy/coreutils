@@ -14,7 +14,6 @@ extern crate time;
 #[macro_use]
 extern crate uucore;
 
-use std::env;
 use std::fs;
 use std::iter;
 use std::io::{stderr, Result, Write};
@@ -74,20 +73,7 @@ impl Stat {
 }
 
 fn get_default_blocks() -> u64 {
-    for env_var in ["DU_BLOCK_SIZE", "BLOCK_SIZE", "BLOCKSIZE"].into_iter() {
-        if let Ok(val) = env::var(env_var) {
-            if let Ok(result) = val.parse::<u64>() {
-                return result;
-            } else {
-                show_error!("invalid {} env '{}'", env_var, val);
-            }
-        }
-    }
-    if env::var("POSIXLY_CORRECT").is_ok() {
-        512
-    } else {
-        1024
-    }
+    1024
 }
 
 // this takes `my_stat` to avoid having to stat files multiple times.
