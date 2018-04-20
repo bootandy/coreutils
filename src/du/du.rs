@@ -125,15 +125,13 @@ fn read_block_size(s: Option<String>) -> u64 {
     match translate_to_pure_number(&s) {
         Some(v) => v,
         None => {
-            match s {
-                Some(value) => show_error!("invalid --block-size argument '{}'", value),
-                _ => (),
+            if let Some(value) = s {
+                show_error!("invalid --block-size argument '{}'", value);
             };
 
             for env_var in ["DU_BLOCK_SIZE", "BLOCK_SIZE", "BLOCKSIZE"].into_iter() {
-                match translate_to_pure_number(&env::var(env_var).ok()) {
-                    Some(quantity) => return quantity,
-                    None => (),
+                if let Some(quantity) = translate_to_pure_number(&env::var(env_var).ok()) {
+                    return quantity;
                 }
             }
 
