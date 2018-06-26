@@ -85,15 +85,35 @@ impl ASTNode {
             ASTNode::Node { ref op_type, .. } => match self.operand_values() {
                 Err(reason) => Err(reason),
                 Ok(operand_values) => match op_type.as_ref() {
-                    "+" => infix_operator_two_ints(|a: i64, b: i64| Ok(a + b), &operand_values),
-                    "-" => infix_operator_two_ints(|a: i64, b: i64| Ok(a - b), &operand_values),
-                    "*" => infix_operator_two_ints(|a: i64, b: i64| Ok(a * b), &operand_values),
-                    "/" => infix_operator_two_ints(
-                        |a: i64, b: i64| {
+                    "+" => infix_operator_two_ints(|a: i64, b: i64| {
+                            match a.checked_add(b) {
+                                Some(v) => Ok(v),
+                                None => Err("+: Numerical result out of range".to_owned()),
+                            }
+                        }, &operand_values
+                    ),
+                    "-" => infix_operator_two_ints(|a: i64, b: i64| {
+                            match a.checked_sub(b) {
+                                Some(v) => Ok(v),
+                                None => Err("-: Numerical result out of range".to_owned()),
+                            }
+                        }, &operand_values
+                    ),
+                    "*" => infix_operator_two_ints(|a: i64, b: i64| {
+                            match a.checked_mul(b) {
+                                Some(v) => Ok(v),
+                                None => Err("*: Numerical result out of range".to_owned()),
+                            }
+                        }, &operand_values
+                    ),
+                    "/" => infix_operator_two_ints(|a: i64, b: i64| {
                             if b == 0 {
                                 Err("division by zero".to_owned())
                             } else {
-                                Ok(a / b)
+                                match a.checked_div(b) {
+                                    Some(v) => Ok(v),
+                                    None => Err("/: Numerical result out of range".to_owned()),
+                                }
                             }
                         },
                         &operand_values,
