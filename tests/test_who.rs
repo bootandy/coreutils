@@ -2,7 +2,6 @@ use common::util::*;
 
 
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_count() {
     for opt in vec!["-q", "--count"] {
@@ -10,7 +9,6 @@ fn test_count() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_boot() {
     for opt in vec!["-b", "--boot"] {
@@ -18,7 +16,6 @@ fn test_boot() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_heading() {
     for opt in vec!["-H"] {
@@ -26,7 +23,6 @@ fn test_heading() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_short() {
     for opt in vec!["-s", "--short"] {
@@ -34,7 +30,6 @@ fn test_short() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_login() {
     for opt in vec!["-l", "--login"] {
@@ -42,7 +37,6 @@ fn test_login() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_m() {
     for opt in vec!["-m"] {
@@ -50,7 +44,6 @@ fn test_m() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_dead() {
     for opt in vec!["-d", "--dead"] {
@@ -58,7 +51,6 @@ fn test_dead() {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_all() {
     for opt in vec!["-a", "--all"] {
@@ -66,7 +58,13 @@ fn test_all() {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(not(target_os = "macos"))]
 fn expected_result(arg: &str) -> String {
     TestScenario::new(util_name!()).cmd_keepenv(util_name!()).env("LANGUAGE", "C").args(&[arg]).run().stdout
+}
+
+#[cfg(target_os = "macos")]
+fn expected_result(arg: &str) -> String {
+    TestScenario::new(util_name!()).cmd_keepenv("g".to_owned()+util_name!())
+            .env("LANGUAGE", "C").args(&[arg]).run().stdout
 }

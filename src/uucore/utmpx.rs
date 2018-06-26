@@ -244,7 +244,7 @@ impl UtmpxIter {
     pub fn read_from(self, f: &str) -> Self {
         let res = unsafe { utmpxname(CString::new(f).unwrap().as_ptr()) };
         if res != 0 {
-            println!("Warning: {}", IOError::last_os_error());
+            eprintln!("Warning: {}", IOError::last_os_error());
         }
         unsafe {
             setutxent();
